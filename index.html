@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ลงทะเบียนรับแจ้งเตือน PayRight</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+  body { font-family: sans-serif; padding: 24px; background: #F7F7F5; margin: 0; }
+.card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 400px; margin: 0 auto; }
+h2 { color: #301811; font-size: 18px; }
+input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #E5E1D8; border-radius: 8px; margin-top: 8px; box-sizing: border-box; }
+button { width: 100%; padding: 12px; font-size: 16px; background: #0D9D4F; color: white; border: none; border-radius: 8px; margin-top: 16px; }
+button:disabled { background: #ccc; }
+  #status { margin-top: 12px; font-size: 14px; color: #6B5C54; }
+  </style>
+  </head>
+  <body>
+  <div class="card">
+  <h2>📋 ลงทะเบียนรับแจ้งเตือน PayRight</h2>
+  <p id="loading">กำลังโหลด...</p>
+  <div id="form" style="display:none">
+  <label>รหัสพนักงาน</label>
+  <input type="text" id="empCode" placeholder="เช่น EMP12345">
+  <button id="submitBtn" onclick="submitForm()">ลงทะเบียน</button>
+  <div id="status"></div>
+  </div>
+  </div>
+  <script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxF4wAHn8t30psIs75ZNj0A3F2HgthDX-iuUKZ18Iyu_Uz4MaisYacn7Z2W5PfcUAIg/exec';
+const LIFF_ID = '2011550164-zjuLgDS6';
+let userId = null;
+function showError(msg) {
+  document.getElementById('loading').innerText = 'เกิดข้อผิดพลาด: ' + msg;
+}
+const timeoutId = setTimeout(function() {
+  showError('หมดเวลาโหลด (liff.init ค้าง)');
+}, 8000);
+try {
+liff.init({ liffId: LIFF_ID }).then(() => {
+  if (!liff.isLoggedIn()) { liff.login(); return; }
+return liff.getProfile();
+}).then(profile => {
+if (!profile) return;
+clearTimeout(timeoutId);
+userId = profile.userId;
+document.getElementById('loading').style.display = 'none';
+document.getElementById('form').style.display = 'block';
+}).catch(err => {
+  clearTimeout(timeoutId);
+showError(err && err.message ? err.message : JSON.stringify(err));
+});
+} catch (err) {
+clearTimeout(timeoutId);
+showError('exception: ' + err.message);
+}
+function submitForm() {
+  const code = document.getElementById('empCode').value.trim();
+if (!code) { document.getElementById('status').innerText = 'กรุณากรอกรหัสพนักงาน'; return; }
+document.getElementById('submitBtn').disabled = true;
+document.getElementById('status').innerText = 'กำลังบันทึก...';
+fetch(APPS_SCRIPT_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  body: JSON.stringify({ employeeCode: code, userId: userId })
+  }).then(r => r.json()).then(res => {
+  if (res.ok) {
+  document.getElementById('form').innerHTML = '<p style="color:#0D9D4F;font-weight:bold">✅ ลงทะเบียนสำเร็จ! คุณจะได้รับแจ้งเตือนผ่านไลน์นี้</p>';
+} else {
+document.getElementById('submitBtn').disabled = false;
+document.getElementById('status').innerText = 'เกิดข้อผิดพลาด: ' + (res.error || '');
+}
+}).catch(err => {
+  document.getElementById('submitBtn').disabled = false;
+document.getElementById('status').innerText = 'เกิดข้อผิดพลาด: ' + err.message;
+});
+}
+</script>
+  </body>
+  </html>
